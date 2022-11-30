@@ -224,8 +224,18 @@ class LocalHandler(object):
             dirname = os.path.dirname(path)
             if dirname and not os.path.exists(dirname):
                 raise FileNotFoundError("output folder {} doesn't exist.".format(dirname))
-            with io.open(path, 'w', encoding="utf-8") as f:
-                f.write(buf)
+            try:
+                logger.info("Trying to write to file %s %s", path, os.stat(path))
+                with io.open(path, 'w', encoding="utf-8") as f:
+                    f.write(buf)
+            except PermissionError:
+                logger.critical("FAILED to write to file, RETRYING %s %s", path, os.stat(path), exc_info=True)
+
+                try:
+                    with io.open(path, 'w', encoding="utf-8") as f:
+                        f.write(buf)
+                except PermissionError:
+                    logger.critical("Write failed again, IGNORING ERROR %s %s", path, os.stat(path), exc_info=True)
 
     def pretty_path(self, path):
         return path
